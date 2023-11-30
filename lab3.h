@@ -7,7 +7,8 @@
  * Defines the structure that will hold the parameter data
  * provided to the worker threads
 */
-typedef struct {
+typedef struct 
+{
     int id;
     int starting_row;
     int starting_col;
@@ -26,3 +27,5 @@ int is_board_valid();
  * and returns a reference to the array.
 */
 int** read_board_from_file(char* filename);
+void *check_row(void *params);
+int exists(int element, int *arr);

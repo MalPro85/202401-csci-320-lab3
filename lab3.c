@@ -69,8 +69,6 @@ void *check_col(void *params) {
     int start = (*param).starting_row, end = (*param).ending_row, curr_col = (*param).starting_col;
     int invalid = 1;
 
-    // printf("%d\n", curr_col);
-
     for (int i = start; i < end; i++)
     {
         if (exists(sudoku_board[i][curr_col], check_array))
@@ -89,17 +87,42 @@ void *check_col(void *params) {
     free(check_array);
 }
 
-int exists(int element, int *arr) {
+void *check_square(void *params) {
+    
+    int *check_array = (int *)calloc(COL_SIZE, sizeof(int));
 
-    //examine this
+    param_struct *param = (param_struct *)(params);
+    int top_row = (*param).starting_row, bottom_row = (*param).ending_row, left_col = (*param).starting_col, right_col = (*param).ending_col;
+    int invalid = 1;
+    int idx = 0;
+
+    for (int i = top_row; i < bottom_row; i++) {
+        
+        for (int j = left_col; j < right_col; j++) {
+            if (exists(sudoku_board[i][j], check_array))
+            {
+                invalid = 0;
+                break;
+            }
+            else {
+                check_array[idx] = sudoku_board[i][j];
+                idx++;
+            }
+        }
+
+        if (invalid == 0)
+            break;
+    }
+
+    worker_validation[(*param).id] = invalid;
+    free(check_array);
+}
+
+int exists(int element, int *arr) {
 
     int found = 0;
 
-    // printf("element: %d\n", element);
-    // printf("in exists\n");
-
     for (int i = 0; i < ROW_SIZE; i++) {
-        // printf("%d\n", arr[i]);
         if (arr[i] == element)
         {
 
@@ -136,6 +159,22 @@ int is_board_valid()
         parameters[i].ending_col = i - 9;
     }
 
+    int idx = 18;
+
+    for (int i = 0; i < 9; i+=3) {
+        for (int j = 0; j < 9; j+=3) {
+            parameters[idx].id = idx;
+            parameters[idx].starting_row = i;
+            parameters[idx].ending_row = i + 3;
+            parameters[idx].starting_col = j;
+            parameters[idx].ending_col = j + 3;
+            idx++;
+        }
+    }
+
+    pthread_create(&(tid[18]), NULL, check_square, &parameters[18]);
+    pthread_join(tid[18], NULL);
+
     for (int i = 0; i < COL_SIZE; i++)
     {
         pthread_create(&(tid[i]), NULL, check_row, &(parameters[i]));
@@ -147,23 +186,41 @@ int is_board_valid()
         pthread_join(tid[i], NULL);
     }
 
-    // TODO: validate borad and update return value
-
-    for (int i = 0; i < COL_SIZE; i++) {
-        printf("worker_validation[%d]: %d\n", i, worker_validation[i]);
+    for (int i = 18; i < NUM_OF_THREADS; i++) {
+        pthread_create((&tid[i]), NULL, check_square, &(parameters[i]));
+        pthread_join(tid[i], NULL);
     }
 
-    for (int i = COL_SIZE; i < (COL_SIZE * 2); i++) {
-        printf("worker_validation[%d]: %d\n", i, worker_validation[i]);
-    }
+    // for (int i = 0; i < COL_SIZE; i++) {
+    //     printf("worker_validation[%d]: %d\n", i, worker_validation[i]);
+    // }
 
+    // for (int i = COL_SIZE; i < (COL_SIZE * 2); i++) {
+    //     printf("worker_validation[%d]: %d\n", i, worker_validation[i]);
+    // }
+
+    // for (int i = 18; i < NUM_OF_THREADS; i++) {
+    //     printf("worker_validation[%d]: %d\n", i, worker_validation[i]);
+    // }
+
+    int validity = 1;
+
+    for (int i = 0; i < NUM_OF_THREADS; i++) {
+        if (worker_validation[i] == 0) {
+            validity = 0;
+            break;
+        }
+    }
 
     free(tid);
     free(parameters);
     free(worker_validation);
 
-    return 0;
+    return validity;
 }
+
+
+
 
 
 
